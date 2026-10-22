@@ -1,0 +1,48 @@
+LeshyHelper/
+├── main.py                    # Точка входа
+├── config.py                  # Конфигурация
+├── requirements.txt           # Зависимости
+│
+├── core/                      # Ядро приложения
+│   ├── __init__.py
+│   ├── knowledge.py           # Мозг Лешего
+│   └── knowledge_base.json    # База знаний
+│
+├── gui/                       # GUI компоненты
+│   ├── __init__.py
+│   ├── main_window.py         # Главное окно
+│   ├── animation_manager.py   # Управление анимациями
+│   ├── styles.py              # Стили
+│   ├── fonts.py               # Загрузка шрифтов
+│   │
+│   └── plugins/               # Плагины для расширения
+│       ├── __init__.py
+│       ├── voice_input.py     # Голосовой ввод
+│       ├── history.py         # История вопросов
+│       ├── weather.py         # Погода и время
+│       └── kiosk.py           # Режим киоска
+│
+├── utils/                     # Утилиты
+│   ├── __init__.py
+│   ├── timer_pool.py          # Единый игровой цикл
+│   └── state_machine.py       # Конечный автомат
+│
+└── assets/                    # Ресурсы
+    ├── fonts/
+    │   └── OldStandardTT-Regular.ttf
+    └── leshy/
+        ├── idle/
+        │   ├── 1.png
+        │   └── ...
+        ├── idle2/
+        │   ├── 1.png
+        │   └── ...
+        ├── thinking/
+        │   ├── 1.png
+        │   └── ...
+        ├── talking/
+        │   ├── 1.png
+        │   └── ...
+        └── lib/              # Новая папка для анимации при просмотре истории
+            ├── 1.png
+            └── ...
