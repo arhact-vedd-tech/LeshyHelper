@@ -1,3 +1,6 @@
-*/__pycache__/*
-*/*/__pycache__/*
-assets/materials/*
+*/__pycache__/
+*/*/__pycache__/
+assets/materials/
+build/
+dist/
+Assistant.spec

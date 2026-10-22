@@ -14,6 +14,11 @@ from typing import Optional, Dict, List, Any
 from pathlib import Path
 from datetime import datetime
 
+# TF-IDF imports
+# from sklearn.feature_extraction.text import TfidfVectorizer
+# from sklearn.metrics.pairwise import cosine_similarity
+# import numpy as np
+
 
 class LeshyWisdom:
     """Хранитель знаний. Ищет ответы на вопросы пользователя."""
@@ -137,16 +142,26 @@ class LeshyWisdom:
     # ========== ЗАГРУЗКА ДАННЫХ ==========
     
     def _load_json(self, filename: str) -> dict:
-        path = self._base_path / filename
-        if not path.exists():
-            print(f"⚠️ Файл не найден: {path}")
-            return {}
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"❌ Ошибка загрузки {filename}: {e}")
-            return {}
+        # Пробуем сначала рядом с базой знаний (core/), потом в корне _base_path
+        candidates = []
+        if self.knowledge_base_path:
+            kb_dir = Path(self.knowledge_base_path).parent
+            candidates.append(kb_dir / filename)
+        candidates.append(self._base_path / filename)
+        candidates.append(self._base_path / "core" / filename)
+
+        for path in candidates:
+            if path.exists():
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        return json.load(f)
+                except Exception as e:
+                    print(f"❌ Ошибка загрузки {path}: {e}")
+                    return {}
+
+        print(f"⚠️ Файл не найден ни по одному пути: {filename}")
+        print(f"   Проверенные пути: {[str(p) for p in candidates]}")
+        return {}
     
     def _load_phrases(self):
         self._fallback_cache = self._load_json("fallback_answers.json")
