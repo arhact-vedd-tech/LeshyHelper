@@ -80,6 +80,12 @@ def build():
         '--hidden-import json '
         '--hidden-import random '
         '--hidden-import datetime '
+        # sklearn
+        '--hidden-import sklearn '
+        '--hidden-import sklearn.feature_extraction.text '
+        '--hidden-import sklearn.metrics.pairwise '
+        '--hidden-import scipy '
+        '--hidden-import scipy.sparse '
         '--clean '
     )
     

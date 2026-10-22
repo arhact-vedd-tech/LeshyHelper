@@ -15,9 +15,9 @@ from pathlib import Path
 from datetime import datetime
 
 # TF-IDF imports
-# from sklearn.feature_extraction.text import TfidfVectorizer
-# from sklearn.metrics.pairwise import cosine_similarity
-# import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 
 class LeshyWisdom:
@@ -63,6 +63,12 @@ class LeshyWisdom:
         self._last_greeting_date = None
         
         self.load_knowledge()
+
+        # инициализация векторной модели
+        self._vectorizer = None
+        self._question_vectors = None
+        self._rebuild_vector_index()
+
         self._load_phrases()
     
     # ========== КОНТЕКСТ И СЧЁТЧИКИ ==========
@@ -186,6 +192,34 @@ class LeshyWisdom:
                 return cache[key]
         return []
     
+    def _rebuild_vector_index(self):
+        """Строит TF-IDF индекс по базе знаний."""
+        if not self.knowledge_base:
+            self._vectorizer = None
+            self._question_vectors = None
+            return
+
+        corpus = []
+        for item in self.knowledge_base:
+            keywords = " ".join(item.get("keywords", []))
+            question = item.get("question", "")
+            corpus.append(f"{keywords} {question}".strip())
+
+        try:
+            self._vectorizer = TfidfVectorizer(
+                lowercase=True,
+                ngram_range=(1, 2),      # учитываем и пары слов ("сохранить файл")
+                min_df=1,
+                sublinear_tf=True,
+            )
+            self._question_vectors = self._vectorizer.fit_transform(corpus)
+            print(f"✅ TF-IDF индекс построен: {self._question_vectors.shape[0]} записей, "
+                f"{self._question_vectors.shape[1]} признаков")
+        except Exception as e:
+            print(f"❌ Ошибка построения TF-IDF: {e}")
+            self._vectorizer = None
+            self._question_vectors = None
+
     def load_knowledge(self):
         if not os.path.exists(self.knowledge_base_path):
             print(f"❌ Книга знаний не найдена: {self.knowledge_base_path}")
@@ -194,6 +228,7 @@ class LeshyWisdom:
             with open(self.knowledge_base_path, 'r', encoding='utf-8') as f:
                 self.knowledge_base = json.load(f)
             print(f"✅ База знаний загружена: {len(self.knowledge_base)} записей")
+            self._rebuild_vector_index()   # <-- добавить
         except Exception as e:
             print(f"❌ Ошибка загрузки базы знаний: {e}")
     
@@ -356,19 +391,42 @@ class LeshyWisdom:
     def find_answer(self, user_query: str) -> Optional[Dict[str, Any]]:
         if not user_query:
             return None
-        
+
+        # Запасной путь: если индекс не построен — старое поведение
+        if self._vectorizer is None or self._question_vectors is None:
+            return self._find_answer_fallback(user_query)
+
+        try:
+            query_vec = self._vectorizer.transform([user_query.lower()])
+            similarities = cosine_similarity(query_vec, self._question_vectors)[0]
+            best_idx = int(np.argmax(similarities))
+            best_score = float(similarities[best_idx])
+
+            # Порог отсечения: ниже — считаем, что ответа нет
+            # 0.05 — мягкий порог; если начнёт отвечать невпопад, подними до 0.1
+            if best_score < 0.08:
+                return None
+
+            return self.knowledge_base[best_idx]
+        except Exception as e:
+            print(f"❌ Ошибка TF-IDF поиска: {e}")
+            return self._find_answer_fallback(user_query)
+
+
+    def _find_answer_fallback(self, user_query: str) -> Optional[Dict[str, Any]]:
+        """Старый поиск по пересечению слов (на случай проблем с sklearn)."""
         user_words = set(user_query.lower().split())
         best_match, max_matches, best_relevance = None, 0, 0.0
-        
+
         for item in self.knowledge_base:
             all_text = " ".join(item.get("keywords", [])) + " " + item.get("question", "")
             all_words = set(all_text.lower().split())
             matches = len(user_words.intersection(all_words))
             relevance = matches / len(user_words) if user_words else 0
-            
+
             if matches > max_matches or (matches == max_matches and relevance > best_relevance):
                 max_matches, best_relevance, best_match = matches, relevance, item
-        
+
         return best_match if best_match and max_matches > 0 else None
     
     def get_loading_phrase(self) -> str:
